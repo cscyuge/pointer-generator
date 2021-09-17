@@ -1,0 +1,15 @@
+{
+    "folder-all":"./data/all/",
+    "folder-train":"./data/train/",
+    "folder-test":"./data/test/",
+    "language":"chinese",
+    "epochs":100,
+    "batch_size":8,
+    "num_words":37061,
+    "embedding_dim":256,
+    "hidden_size":256,
+    "num_layers":1,
+    "max_output":512,
+    "max_content":512,
+    "lr":0.001,
+}
