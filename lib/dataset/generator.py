@@ -8,6 +8,7 @@ from util_common.nlp.word_dictionary import word2index
 
 import os
 import numpy as np
+import pickle
 
 
 
@@ -77,14 +78,8 @@ class ChineseDataset(data.Dataset):
     
     def __init__(self, folder, configure, word_index, train):
         # Declare the hyperparameter
-        self.folder = folder
-        self.files = os.listdir(folder)
-        if train:
-            # training 
-            self.files = self.files#[:-50]
-        else: 
-            # val
-            self.files = self.files#[-50:]
+        self.srcs = pickle.load(open(os.path.join(folder,'src_txts.pkl'), 'rb'))
+        self.tars = pickle.load(open(os.path.join(folder, 'tar_txts.pkl'), 'rb'))
         self.language = configure["language"]
         self.word_index = word_index
         self.max_content = configure["max_content"]
@@ -94,17 +89,12 @@ class ChineseDataset(data.Dataset):
 
     def __getitem__(self, index):
 
-        # 1.Picked one file
-        file = self.files[index]
+        input_txt = self.srcs[index]
+        target_txt = self.tars[index]
 
-        # 2.Read the content of file
-        input_txt, target_txt = read_content(self.folder+file).split("\n")
-        
-        # 3.Tranfer the words to index
-        transfer_input, tranfer_target = list(map(lambda x: self.transfer_content(x), 
+        transfer_input, tranfer_target = list(map(lambda x: self.transfer_content(x),
                                                   [input_txt, target_txt]))
 
-        # 4.Padding the data
         transfer_input = self.padding(transfer_input, data_type="content")
         tranfer_target = self.padding(tranfer_target, data_type="target")
 
@@ -136,7 +126,7 @@ class ChineseDataset(data.Dataset):
         return transfer_words
 
     def __len__(self):
-        return len(self.files)
+        return len(self.srcs)
 
 
 

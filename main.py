@@ -8,9 +8,18 @@ import torch
 import os
 import random
 import time
+from importlib import  import_module
+import pickle
+from bleu_eval import count_score
+
 
 if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    x = import_module('bert')
+    bert_model = 'hfl/chinese-bert-wwm-ext'
+    config = x.Config(32, bert_model)
+    with open('./data/test/tar_txts.pkl','rb') as f:
+        tar_txts = pickle.load(f)
 
     # 1. Declare the hyperparameter
     device, configure, word_index, index_word, train_loader, test_loader = processing("./configure")
@@ -28,6 +37,7 @@ if __name__ == "__main__":
     optimizer_decoder = torch.optim.Adam(model_decoder.parameters(), lr=configure["lr"])
 
     start_time = time.clock()
+    max_bleu = 0
     # Training
     for epoch in range(configure["epochs"]):
         for idx, item in enumerate(train_loader):
@@ -139,13 +149,21 @@ if __name__ == "__main__":
 
             with open("./result/test{}.txt".format(epoch), "w", encoding="utf-8") as a:
                 a.writelines([_+'\n' for _ in results])
+            references = [[u] for u in tar_txts]
+            bleu = count_score(results, references, config)
+            print("BLEU: ", bleu)
+            if bleu>max_bleu:
+                max_bleu = bleu
+                torch.save(model_encoder.state_dict(), './cache/model_encoder_best.ckpt')
+                torch.save(model_decoder.state_dict(), './cache/model_decoder_best.ckpt')
+
 
             acc = 100 * correct / total
             if epoch % 10==0:
                 torch.save(model_encoder.state_dict(), './cache/model_encoder_{}.ckpt'.format(epoch))
                 torch.save(model_decoder.state_dict(), './cache/model_decoder_{}.ckpt'.format(epoch))
 
-            print('Test Accuracy of the model on the test: {} %'.format(acc))
+            # print('Test Accuracy of the model on the test: {} %'.format(acc))
 
     torch.save(model_encoder.state_dict(), './cache/model_encoder_final.ckpt')
     torch.save(model_decoder.state_dict(), './cache/model_decoder_final.ckpt')

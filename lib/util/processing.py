@@ -37,12 +37,12 @@ def processing(path):
     train_loader = dataset_pipline(folder=configure["folder-train"],
                                    batch_size=configure["batch_size"],
                                    word_index=word_index, 
-                                   configure=configure, shuffle=True, train=True)
+                                   configure=configure, shuffle=False, train=True)
 
     test_loader = dataset_pipline(folder=configure["folder-test"],
                                   batch_size=configure["batch_size"],
                                   word_index=word_index,
-                                  configure=configure, shuffle=True, train=True)
+                                  configure=configure, shuffle=False, train=True)
 
     return device, configure, word_index, index_word,train_loader, test_loader
     
