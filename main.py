@@ -10,7 +10,7 @@ import random
 import time
 
 if __name__ == "__main__":
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
     # 1. Declare the hyperparameter
     device, configure, word_index, index_word, train_loader, test_loader = processing("./configure")
@@ -19,10 +19,7 @@ if __name__ == "__main__":
     # Declare the encoder model
     model_encoder = SimpleEncoder(configure).to(device)
     model_decoder = AttentionDecoder(configure, device).to(device)
-    # model_encoder = torch.nn.DataParallel(model_encoder)
-    # model_encoder.cuda()
-    # model_decoder = torch.nn.DataParallel(model_decoder)
-    # model_decoder.cuda()
+
 
     # Define the optimizer and loss
     criterion = torch.nn.CrossEntropyLoss()
@@ -37,8 +34,7 @@ if __name__ == "__main__":
 
             # transfer to long tensor
             input, target = [i.type(torch.LongTensor).to(device) for i in item]
-            # input = input.cuda()
-            # target = target.cuda()
+
 
             if input.size(0) != configure["batch_size"]: continue
             # Encoder   
@@ -89,7 +85,8 @@ if __name__ == "__main__":
 
             if (idx) % 10 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Coverage Loss: {:4f} , Time cost: {:4f}'
-                    .format(epoch+1, configure["epochs"], idx, len(train_loader), seq_loss.item(),step_coverage_loss.item(),time.clock()-start_time))
+                    .format(epoch+1, configure["epochs"], idx, len(train_loader), seq_loss.item()/configure['batch_size'],
+                            step_coverage_loss.item(),time.clock()-start_time))
                 start_time = time.clock()
 
 

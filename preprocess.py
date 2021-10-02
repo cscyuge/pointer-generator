@@ -7,20 +7,24 @@ from util_common.nlp.word_dictionary import word2index
 from util_common.nlp.word_token import word_token
 from util_common.nlp.os import read_folder_content, read_content
 import random
+import numpy as np
 
 
 def main():
-    with open('./data/src_all.pkl', 'rb') as f:
-        src_all = pickle.load(f)
-    with open('./data/tar_all.pkl', 'rb') as f:
-        tar_all = pickle.load(f)
+
+    with open('./data/dataset-aligned.pkl','rb') as f:
+        dataset_aligned = pickle.load(f)
+    src_all = []
+    tar_all = []
+    for data in dataset_aligned:
+        src_all.extend(data[0].split('。'))
+        tar_all.extend(data[1].split('。'))
     language = 'chinese'
-    configure = eval(read_content('configure'))
     src_words = []
     tar_words = []
     src_new = []
     tar_new = []
-
+    configure = eval(read_content('configure'))
     for src in tqdm(src_all):
         src = re.sub('\*\*', '', src).lower()
         src = src.replace('\n', '')
@@ -38,18 +42,26 @@ def main():
     src_all = src_new[:]
     tar_all = tar_new[:]
     dataset = []
+    length = []
+    max_len = 64
     for src, tar, src_word, tar_word in zip(src_all, tar_all, src_words, tar_words):
-        if len(src_word)<configure['max_content'] and len(tar_word)<configure['max_output'] and len(src_word)>0 and len(tar_word)>0:
+        if len(src_word)<max_len and len(tar_word)<max_len and len(src_word)>0 and len(tar_word)>0:
             dataset.append([src, tar])
+            length.append(len(src_word))
 
+    arg_index = np.argsort(length)
+    dataset_new = []
+    for index in arg_index:
+        dataset_new.append(dataset[index])
+    dataset = dataset_new[:]
     print(len(dataset))
-    with open('./data/dataset.pkl','wb') as f:
-        pickle.dump(dataset,f)
+    cnt = 0
+    for data in dataset:
+        if data[0]!=data[1]:
+            cnt += 1
+    print(cnt)
 
-    random.seed(2021)
-    random.shuffle(dataset)
-    dataset = dataset
-    tot = len(dataset)
+
     with open('./data/all/all.txt', 'w', encoding='utf-8') as f:
         for data in dataset:
             f.write(data[0])
@@ -57,17 +69,17 @@ def main():
             f.write(data[1])
             f.write('\n')
 
-    for i, data in enumerate(dataset[:tot // 8*7]):
-        with open('./data/train/{}.txt'.format(i+1), 'w', encoding='utf-8') as f:
-            f.write(data[0])
-            f.write('\n')
-            f.write(data[1])
+    tot = len(dataset)
+    with open('./data/train/src_txts.pkl', 'wb') as f:
+        pickle.dump([u[0] for u in dataset[:tot // 8*7]], f)
+    with open('./data/train/tar_txts.pkl', 'wb') as f:
+        pickle.dump([u[1] for u in dataset[:tot // 8*7]], f)
 
-    for i, data in enumerate(dataset[tot // 8*7:]):
-        with open('./data/test/{}.txt'.format(i+1), 'w', encoding='utf-8') as f:
-            f.write(data[0])
-            f.write('\n')
-            f.write(data[1])
+    with open('./data/test/src_txts.pkl', 'wb') as f:
+        pickle.dump([u[0] for u in dataset[tot // 8*7:]], f)
+    with open('./data/test/tar_txts.pkl', 'wb') as f:
+        pickle.dump([u[1] for u in dataset[tot // 8*7:]], f)
+
 
 
 if __name__ == '__main__':
