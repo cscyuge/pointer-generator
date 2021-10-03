@@ -10,21 +10,24 @@ import random
 import time
 from importlib import  import_module
 import pickle
+from transformers import BertTokenizer
 from bleu_eval import count_score
 
 
 if __name__ == "__main__":
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    x = import_module('bert')
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     bert_model = 'hfl/chinese-bert-wwm-ext'
-    config = x.Config(32, bert_model)
+
+    tokenizer = BertTokenizer.from_pretrained(bert_model)
     with open('./data/test/tar_txts.pkl','rb') as f:
         tar_txts = pickle.load(f)
 
     # 1. Declare the hyperparameter
-    device, configure, word_index, index_word, train_loader, test_loader = processing("./configure")
+    device, configure, train_loader, test_loader = processing("./configure", tokenizer)
 
-    print(len(word_index))
+    # print(len(word_index))
+    print(tokenizer.vocab_size)
+
     # Declare the encoder model
     model_encoder = SimpleEncoder(configure).to(device)
     model_decoder = AttentionDecoder(configure, device).to(device)
@@ -50,9 +53,8 @@ if __name__ == "__main__":
             # Encoder   
             encoder_out, encoder_hidden = model_encoder(input)
             
-            # Decoder 
-            # declare the first input <go>
-            decoder_input = torch.tensor([word_index["<go>"]]*configure["batch_size"], 
+            # Decoder
+            decoder_input = torch.tensor([tokenizer.cls_token_id]*configure["batch_size"],
                                          dtype=torch.long, device=device).view(configure["batch_size"], -1)
             decoder_hidden = encoder_hidden
             z = torch.ones([configure["batch_size"],1,configure["hidden_size"]]).to(device)
@@ -120,7 +122,7 @@ if __name__ == "__main__":
                 
                 # Decoder 
                 # declare the first input <go>
-                decoder_input = torch.tensor([word_index["<go>"]]*configure["batch_size"], 
+                decoder_input = torch.tensor([tokenizer.cls_token_id]*configure["batch_size"],
                                             dtype=torch.long, device=device).view(configure["batch_size"], -1)
                 decoder_hidden = encoder_hidden
                 seq_loss = 0
@@ -143,14 +145,16 @@ if __name__ == "__main__":
                     # print(torch.max(decoder_output, 1)[1],target[:,i])
                     symbols = torch.max(decoder_output, 1)[1].cpu().tolist()
                     for i, symbol in enumerate(symbols):
-                        sentences[i].append(index_word[symbol])
+                        sentences[i].append(symbol)
 
+                sentences = [tokenizer.convert_ids_to_tokens(u) for u in sentences]
                 results.extend([''.join(_) for _ in sentences])
 
             with open("./result/test{}.txt".format(epoch), "w", encoding="utf-8") as a:
                 a.writelines([_+'\n' for _ in results])
             references = [[u] for u in tar_txts]
-            bleu = count_score(results, references, config)
+            results = [u.replace('[CLS]', '').replace('[SEP]', '').replace('[PAD]', '') for u in results]
+            bleu = count_score(results, references, tokenizer)
             print("BLEU: ", bleu)
             if bleu>max_bleu:
                 max_bleu = bleu

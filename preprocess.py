@@ -8,10 +8,11 @@ from util_common.nlp.word_token import word_token
 from util_common.nlp.os import read_folder_content, read_content
 import random
 import numpy as np
+from transformers import BertTokenizer
+from keras.preprocessing.sequence import pad_sequences
 
 
 def main():
-
     with open('./data/dataset-aligned.pkl','rb') as f:
         dataset_aligned = pickle.load(f)
     src_all = []
@@ -19,66 +20,69 @@ def main():
     for data in dataset_aligned:
         src_all.extend(data[0].split('。'))
         tar_all.extend(data[1].split('。'))
-    language = 'chinese'
-    src_words = []
-    tar_words = []
-    src_new = []
-    tar_new = []
-    configure = eval(read_content('configure'))
+
+    # bert_model = 'trueto/medbert-base-wwm-chinese'
+    bert_model = 'hfl/chinese-bert-wwm-ext'
+    tokenizer = BertTokenizer.from_pretrained(bert_model)
+    src_ids = []
+    tar_ids = []
+    len_cnt = [0 for _ in range(2600)]
     for src in tqdm(src_all):
         src = re.sub('\*\*', '', src).lower()
-        src = src.replace('\n', '')
-        words = word_token(text=src, language=language)
-        src_words.append(words)
-        src_new.append(src)
+        tokens = tokenizer.tokenize(src)
+        tokens = ['[CLS]'] + tokens + ['[SEP]']
+        ids = tokenizer.convert_tokens_to_ids(tokens)
+        src_ids.append(ids)
+        len_cnt[len(ids)] += 1
 
     for tar in tqdm(tar_all):
         tar = re.sub('\*\*', '', tar).lower()
-        tar = tar.replace('\n','')
-        words = word_token(text=tar, language=language)
-        tar_words.append(words)
-        tar_new.append(tar)
-
-    src_all = src_new[:]
-    tar_all = tar_new[:]
-    dataset = []
-    length = []
+        tokens = tokenizer.tokenize(tar)
+        tokens = ['[CLS]'] + tokens + ['[SEP]']
+        ids = tokenizer.convert_tokens_to_ids(tokens)
+        tar_ids.append(ids)
+        len_cnt[len(ids)] += 1
+    print(len(src_ids))
+    src_ids_smaller = []
+    tar_ids_smaller = []
+    tar_txts = []
     max_len = 64
-    for src, tar, src_word, tar_word in zip(src_all, tar_all, src_words, tar_words):
-        if len(src_word)<max_len and len(tar_word)<max_len and len(src_word)>0 and len(tar_word)>0:
-            dataset.append([src, tar])
-            length.append(len(src_word))
-
+    for src, tar, txt in zip(src_ids, tar_ids, tar_all):
+        if len(src)<max_len and len(tar)<max_len and len(src)>2 and len(tar)>2 :
+            src_ids_smaller.append(src)
+            tar_ids_smaller.append(tar)
+            tar_txts.append(txt)
+    src_ids = src_ids_smaller
+    tar_ids = tar_ids_smaller
+    print(len(src_ids))
+    src_ids = np.array(src_ids)
+    tar_ids = np.array(tar_ids)
+    length = []
+    for src in src_ids:
+        length.append(len(src))
     arg_index = np.argsort(length)
-    dataset_new = []
-    for index in arg_index:
-        dataset_new.append(dataset[index])
-    dataset = dataset_new[:]
-    print(len(dataset))
-    cnt = 0
-    for data in dataset:
-        if data[0]!=data[1]:
-            cnt += 1
-    print(cnt)
+    src_ids_unpad = src_ids[arg_index]
+    tar_ids_unpad = tar_ids[arg_index]
 
+    configure = eval(read_content('./configure'))
+    src_ids = pad_sequences(src_ids, maxlen=configure['max_content'], dtype="long", value=0, truncating="post", padding="post")
+    tar_ids = pad_sequences(tar_ids, maxlen=configure['max_output'], dtype="long", value=0, truncating="post", padding="post")
 
-    with open('./data/all/all.txt', 'w', encoding='utf-8') as f:
-        for data in dataset:
-            f.write(data[0])
-            f.write('\n')
-            f.write(data[1])
-            f.write('\n')
+    src_masks = [[float(i != 0.0) for i in ii] for ii in src_ids]
+    tar_masks = [[float(i != 0.0) for i in ii] for ii in tar_ids]
+    src_ids = {'pad': src_ids, 'unpad': src_ids_unpad}
+    tar_ids = {'pad': tar_ids, 'unpad': tar_ids_unpad}
+    with open('./data/train/src_ids.pkl', 'wb') as f:
+        pickle.dump(src_ids['pad'][:len(src_ids['pad'])//10*9], f)
+    with open('./data/train/tar_ids.pkl', 'wb') as f:
+        pickle.dump(tar_ids['pad'][:len(src_ids['pad'])//10*9], f)
+    with open('./data/test/src_ids.pkl', 'wb') as f:
+        pickle.dump(src_ids['pad'][len(src_ids['pad'])//10*9:], f)
+    with open('./data/test/tar_ids.pkl', 'wb') as f:
+        pickle.dump(tar_ids['pad'][len(src_ids['pad'])//10*9:], f)
+    with open('./data/test/tar_txts.pkl','wb') as f:
+        pickle.dump(tar_txts[len(src_ids['pad'])//10*9:], f)
 
-    tot = len(dataset)
-    with open('./data/train/src_txts.pkl', 'wb') as f:
-        pickle.dump([u[0] for u in dataset[:tot // 8*7]], f)
-    with open('./data/train/tar_txts.pkl', 'wb') as f:
-        pickle.dump([u[1] for u in dataset[:tot // 8*7]], f)
-
-    with open('./data/test/src_txts.pkl', 'wb') as f:
-        pickle.dump([u[0] for u in dataset[tot // 8*7:]], f)
-    with open('./data/test/tar_txts.pkl', 'wb') as f:
-        pickle.dump([u[1] for u in dataset[tot // 8*7:]], f)
 
 
 

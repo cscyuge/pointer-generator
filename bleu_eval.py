@@ -6,13 +6,13 @@ def get_sentence_bleu(candidate, reference):
     return score
 
 
-def count_score(candidate, reference, config):
+def count_score(candidate, reference, tokenizer):
     avg_score = 0
     for k in range(len(candidate)):
         reference_ = reference[k]
         for m in range(len(reference_)):
-            reference_[m] = config.tokenizer.tokenize(reference_[m])
-        candidate[k] = config.tokenizer.tokenize(candidate[k])
+            reference_[m] = tokenizer.tokenize(reference_[m])
+        candidate[k] = tokenizer.tokenize(candidate[k])
         try:
             avg_score += get_sentence_bleu(candidate[k], reference_)/len(candidate)
         except:

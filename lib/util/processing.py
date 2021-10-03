@@ -17,32 +17,30 @@ def read_configure_word_index(path):
     return configure, word_index, index_word
 
 
-def dataset_pipline(folder, batch_size, word_index, configure, shuffle, train):
+def dataset_pipline(folder, batch_size, configure, shuffle, tokenizer):
     # Declare the dataset pipline
-    dataset = ChineseDataset(folder, configure, word_index, train)
+    dataset = ChineseDataset(folder)
     loader = torch.utils.data.DataLoader(dataset=dataset,
                                          batch_size=batch_size,
                                          shuffle=shuffle)
     return loader
 
 
-def processing(path):
+def processing(path, tokenizer):
     # 1. Declare the device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # 2. Declare the processing
-    configure, word_index, index_word = read_configure_word_index(path)
+    configure = eval(read_content(path))
     
     # 3. Declare the dataset pipline
     train_loader = dataset_pipline(folder=configure["folder-train"],
                                    batch_size=configure["batch_size"],
-                                   word_index=word_index, 
-                                   configure=configure, shuffle=False, train=True)
+                                   configure=configure, shuffle=False, tokenizer=tokenizer)
 
     test_loader = dataset_pipline(folder=configure["folder-test"],
                                   batch_size=configure["batch_size"],
-                                  word_index=word_index,
-                                  configure=configure, shuffle=False, train=True)
+                                  configure=configure, shuffle=False, tokenizer=tokenizer)
 
-    return device, configure, word_index, index_word,train_loader, test_loader
+    return device, configure, train_loader, test_loader
     
