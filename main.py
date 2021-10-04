@@ -35,6 +35,7 @@ if __name__ == "__main__":
 
     # Define the optimizer and loss
     criterion = torch.nn.CrossEntropyLoss()
+    # criterion = torch.nn.NLLLoss(reduce=False)
     # encoder optimizer
     optimizer_encoder = torch.optim.Adam(model_encoder.parameters(), lr=configure["lr"])
     optimizer_decoder = torch.optim.Adam(model_decoder.parameters(), lr=configure["lr"])
@@ -97,7 +98,7 @@ if __name__ == "__main__":
 
             if (idx) % 10 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}, Coverage Loss: {:4f} , Time cost: {:4f}'
-                    .format(epoch+1, configure["epochs"], idx, len(train_loader), seq_loss.item()/configure['batch_size'],
+                    .format(epoch+1, configure["epochs"], idx, len(train_loader), seq_loss.item()/configure['batch_size']/configure['max_output'],
                             step_coverage_loss.item(),time.clock()-start_time))
                 start_time = time.clock()
 

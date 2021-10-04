@@ -72,6 +72,13 @@ def main():
     tar_masks = [[float(i != 0.0) for i in ii] for ii in tar_ids]
     src_ids = {'pad': src_ids, 'unpad': src_ids_unpad}
     tar_ids = {'pad': tar_ids, 'unpad': tar_ids_unpad}
+
+    seq_len_srcs = len(src_ids['pad'][0]) - np.sum(src_ids['pad'] == 0, axis=1)
+    arg_index = np.argsort(seq_len_srcs)
+    src_ids['pad'] = np.array(src_ids['pad'])[arg_index]
+    tar_ids['pad'] = np.array(tar_ids['pad'])[arg_index]
+    tar_txts = np.array(tar_txts)[arg_index]
+
     with open('./data/train/src_ids.pkl', 'wb') as f:
         pickle.dump(src_ids['pad'][:len(src_ids['pad'])//10*9], f)
     with open('./data/train/tar_ids.pkl', 'wb') as f:
