@@ -81,12 +81,21 @@ def main():
 
     with open('./data/train/src_ids.pkl', 'wb') as f:
         pickle.dump(src_ids['pad'][:len(src_ids['pad'])//10*9], f)
+    with open('./data/train/src_masks.pkl', 'wb') as f:
+        pickle.dump(src_masks[:len(src_ids['pad']) // 10 * 9], f)
     with open('./data/train/tar_ids.pkl', 'wb') as f:
         pickle.dump(tar_ids['pad'][:len(src_ids['pad'])//10*9], f)
+    with open('./data/train/tar_masks.pkl', 'wb') as f:
+        pickle.dump(tar_masks[:len(src_ids['pad']) // 10 * 9], f)
+
     with open('./data/test/src_ids.pkl', 'wb') as f:
         pickle.dump(src_ids['pad'][len(src_ids['pad'])//10*9:], f)
+    with open('./data/test/src_masks.pkl', 'wb') as f:
+        pickle.dump(src_masks[len(src_ids['pad'])//10*9:], f)
     with open('./data/test/tar_ids.pkl', 'wb') as f:
         pickle.dump(tar_ids['pad'][len(src_ids['pad'])//10*9:], f)
+    with open('./data/test/tar_masks.pkl', 'wb') as f:
+        pickle.dump(tar_masks[len(src_ids['pad'])//10*9:], f)
     with open('./data/test/tar_txts.pkl','wb') as f:
         pickle.dump(tar_txts[len(src_ids['pad'])//10*9:], f)
 
